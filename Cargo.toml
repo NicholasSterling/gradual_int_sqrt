@@ -3,10 +3,16 @@ name = "gradual_int_sqrt"
 version = "0.1.0"
 authors = ["Nicholas Sterling <Nicholas.Sterling@gmail.com>"]
 edition = "2018"
+keywords = ["math", "square root"]
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
+clippy = {version = "0.0.302", optional = true}
 
 [dev-dependencies]
 more-asserts = "0.2"
+
+[features]
+default = []
+dev = ["clippy"]

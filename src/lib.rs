@@ -1,3 +1,5 @@
+#![no_std]
+
 //!
 //! This crate contains functions that generate functions that calculate
 //! the integer square root (hereafter "isqrt") of a number.
@@ -83,8 +85,8 @@
 //! with an appropriate initial isqrt value.
 //!
 
-use std::ops::{Add, Sub, Mul, AddAssign, SubAssign};
-use std::fmt::Debug;
+use core::ops::{Add, Sub, Mul, AddAssign, SubAssign};
+use core::fmt::Debug;
 
 /// Returns a function that calculates the integer square root of a number.
 /// The returned function can very efficiently produce such a square root
@@ -277,10 +279,12 @@ mod tests {
     fn test_scaled_asc_u32_u16() {
         let mut to_isqrt = int_sqrt_gradually_ascending_from::<u32, u16>(0);
         let result: Vec<_> = (0u32..10)
-            .map(|n| to_isqrt(1024*n))
+            //.map(|n| to_isqrt(1024*n))
+            .map(|n| to_isqrt(256*n))
+            //.map(|n| to_isqrt(1024*n))
             .collect();
         let expected: Vec<u16> = vec![
-            0, 32, 45, 55, 64, 71, 78, 84, 90, 96
+            0, 32, 45, 55, 64, 71, 78, 84, 90, 96   // 1024
         ];
         assert_eq!(result, expected);
     }
