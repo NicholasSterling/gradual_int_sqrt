@@ -108,7 +108,7 @@ pub fn int_sqrt_gradually_changing_from<Num, Sqrt>(init: Sqrt) -> impl FnMut(Num
     let mut sqrt: Sqrt = init; // the current square root
     let s: Num = init.into();
     let mut lo: Num = s * s;
-    let mut hi: Num = lo + (s * 2.into());   // (s + 1)^2 - 1 without overflowing
+    let mut hi: Num = lo + s + s;   // (s + 1)^2 - 1 without overflowing
     move |n: Num| {
         // If the current sqrt doesn't work for this n,
         // increment it until it does.
@@ -276,11 +276,21 @@ mod tests {
     #[test]
     fn test_scaled_asc_u32_u16() {
         let mut to_isqrt = int_sqrt_gradually_ascending_from::<u32, u16>(0);
+        //let result: Vec<_> = (1000u32..1010)
         let result: Vec<_> = (0u32..10)
-            .map(|n| to_isqrt(1024*n))
+            //.map(|n| to_isqrt(  64*n))
+            .map(|n| to_isqrt( 256*n))
+            //.map(|n| to_isqrt(1024*n))
+            //.map(|n| to_isqrt(4096*n))
             .collect();
         let expected: Vec<u16> = vec![
-            0, 32, 45, 55, 64, 71, 78, 84, 90, 96
+            //         |                   |
+            //  0    1    2    3    4    5    6    7    8    9
+            //  0,   8,  11,  13,  16,  17,  19,  21,  22,  24    // isqrt(  64*n)
+                0,  16,  22,  27,  32,  35,  39,  42,  45,  48    // isqrt( 256*n)
+            //  0,  32,  45,  55,  64,  71,  78,  84,  90,  96    // isqrt(1024*n)
+            //  0,  64,  90, 110, 128, 143, 156, 169, 181, 192    // isqrt(4096*n)
+            //         |                   |
         ];
         assert_eq!(result, expected);
     }
