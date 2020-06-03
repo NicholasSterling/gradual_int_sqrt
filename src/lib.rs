@@ -110,7 +110,7 @@ pub fn int_sqrt_gradually_changing_from<Num, Sqrt>(init: Sqrt) -> impl FnMut(Num
     let mut sqrt: Sqrt = init; // the current square root
     let s: Num = init.into();
     let mut lo: Num = s * s;
-    let mut hi: Num = lo + (s * 2.into());   // (s + 1)^2 - 1 without overflowing
+    let mut hi: Num = lo + s + s;   // (s + 1)^2 - 1 without overflowing
     move |n: Num| {
         // If the current sqrt doesn't work for this n,
         // increment it until it does.
@@ -211,17 +211,18 @@ mod tests {
 
     use super::*;
     use more_asserts::*;
+    use arrayvec::ArrayVec;
 
     #[test]
     fn test_asc_u16_u8() {
         let to_isqrt = int_sqrt_gradually_ascending_from::<u16, u8>(0);
-        let result: Vec<u8> = (0u16..10)
+        let result: ArrayVec<[u8; 10]> = (0u16..10)
             .map(to_isqrt)
             .collect();
-        let expected: Vec<u8> = vec![
+        let expected = ArrayVec::from([
             // 1  2  3  4  5  6  7  8  9
             0, 1, 1, 1, 2, 2, 2, 2, 2, 3
-        ];
+        ]);
         assert_eq!(result, expected);
     }
 
@@ -241,24 +242,24 @@ mod tests {
     #[test]
     fn test_asc_u16_u16() {
         let to_isqrt = int_sqrt_gradually_ascending_from::<u16, u16>(0);
-        let result: Vec<_> = (0u16..10)
+        let result: ArrayVec<[u16; 10]> = (0u16..10)
             .map(to_isqrt)
             .collect();
-        let expected: Vec<u16> = vec![
+        let expected = ArrayVec::from([
             0, 1, 1, 1, 2, 2, 2, 2, 2, 3
-        ];
+        ]);
         assert_eq!(result, expected);
     }
 
     #[test]
     fn test_asc_u32_u16() {
         let to_isqrt = int_sqrt_gradually_ascending_from::<u32, u16>(0);
-        let result: Vec<_> = (0u32..10)
+        let result: ArrayVec<[u16; 10]> = (0u32..10)
             .map(to_isqrt)
             .collect();
-        let expected: Vec<u16> = vec![
+        let expected = ArrayVec::from([
             0, 1, 1, 1, 2, 2, 2, 2, 2, 3
-        ];
+        ]);
         assert_eq!(result, expected);
     }
 
@@ -266,53 +267,61 @@ mod tests {
     fn test_asc_i32_i16() {
         // Overflow is possible with i32_i16, but not with these numbers.
         let to_isqrt = int_sqrt_gradually_ascending_from::<i32, i16>(0);
-        let result: Vec<_> = (0i32..10)
+        let result: ArrayVec<[i16; 10]> = (0i32..10)
             .map(to_isqrt)
             .collect();
-        let expected: Vec<i16> = vec![
+        let expected = ArrayVec::from([
             0, 1, 1, 1, 2, 2, 2, 2, 2, 3
-        ];
+        ]);
         assert_eq!(result, expected);
     }
 
     #[test]
     fn test_scaled_asc_u32_u16() {
         let mut to_isqrt = int_sqrt_gradually_ascending_from::<u32, u16>(0);
-        let result: Vec<_> = (0u32..10)
+        //let result: ArrayVec<[u8; 10]> = (1000u32..1010)
+        let result: ArrayVec<[u16; 10]> = (0u32..10)
+            //.map(|n| to_isqrt(  64*n))
+              .map(|n| to_isqrt( 256*n))
             //.map(|n| to_isqrt(1024*n))
-            .map(|n| to_isqrt(256*n))
-            //.map(|n| to_isqrt(1024*n))
+            //.map(|n| to_isqrt(4096*n))
             .collect();
-        let expected: Vec<u16> = vec![
-            0, 32, 45, 55, 64, 71, 78, 84, 90, 96   // 1024
-        ];
+        let expected = ArrayVec::from([
+            //         |                   |
+            //  0    1    2    3    4    5    6    7    8    9
+            //  0,   8,  11,  13,  16,  17,  19,  21,  22,  24    // isqrt(  64*n)
+                0,  16,  22,  27,  32,  35,  39,  42,  45,  48    // isqrt( 256*n)
+            //  0,  32,  45,  55,  64,  71,  78,  84,  90,  96    // isqrt(1024*n)
+            //  0,  64,  90, 110, 128, 143, 156, 169, 181, 192    // isqrt(4096*n)
+            //         |                   |
+        ]);
         assert_eq!(result, expected);
     }
 
     #[test]
     fn test_desc_u16_u8() {
         let to_isqrt = int_sqrt_gradually_descending_from::<u16, u8>(5);
-        let result: Vec<u8> = (0u16..10)
+        let result: ArrayVec<[u8; 10]> = (0u16..10)
             .rev()
             .map(to_isqrt)
             .collect();
-        let expected: Vec<u8> = vec![
+        let expected = ArrayVec::from([
             3, 2, 2, 2, 2, 2, 1, 1, 1, 0,
-        ];
+        ]);
         assert_eq!(result, expected);
     }
 
     #[test]
     fn test_u16_u8() {
         let to_isqrt = int_sqrt_gradually_changing_from::<u16, u8>(0);
-        let result: Vec<u8> = (0u16..10)
+        let result: ArrayVec<[u8; 20]> = (0u16..10)
             .chain((0u16..10).rev())
             .map(to_isqrt)
             .collect();
-        let expected: Vec<u8> = vec![
+        let expected = ArrayVec::from([
             //1 2 3 4 5 6 7 8 9 9 8 7 6 5 4 3 2 1 0
             0,1,1,1,2,2,2,2,2,3,3,2,2,2,2,2,1,1,1,0
-        ];
+        ]);
         assert_eq!(result, expected);
     }
 
