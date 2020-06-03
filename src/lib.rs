@@ -3,12 +3,11 @@
 //!
 //! This crate contains functions that generate functions that calculate
 //! the integer square root (hereafter "isqrt") of a number.
-//! For example, the integer square root of 30 is 5, since 5^2 = 25 and
-//! 6^2 = 36.
+//! For example, the isqrt of 30 is 5, since 5^2 = 25 and 6^2 = 36.
 //! These generated functions are very efficient at processing gradually
 //! changing sequences of numbers.
-//! They achieve this efficiency by remembering the previous square root
-//! calculated and making use of that in calculating the next square root.
+//! They achieve this efficiency by remembering the previous isqrt
+//! calculated and making use of that in calculating the next isqrt.
 //!
 //! As a trivial example, if the last value processed was 133, then the
 //! algorithm has figured out that the isqrt was 11, and that that value
@@ -19,7 +18,7 @@
 //! Multiplying by 2 is just a trivial shift left, so as long as the
 //! current value is not very far from the previous value, its isqrt
 //! costs very little to produce.  If, however, the next invocation
-//! asks for the isqrt of 1,000,293, then it will take many iterations
+//! asks for the isqrt of 1,000,000, then it will take many iterations
 //! to reach the correct isqrt value of 1000.
 //!
 //! Here is an example involving an ascending sequence:
@@ -82,7 +81,7 @@
 //!
 //! In cases where you know that a big jump has occurred (e.g. in
 //! a reset function), you can simply regenerate the isqrt function
-//! with an appropriate initial isqrt value.
+//! with an appropriate initial isqrt value (if you know one!).
 //!
 
 use core::ops::{Add, Sub, Mul, AddAssign, SubAssign};
