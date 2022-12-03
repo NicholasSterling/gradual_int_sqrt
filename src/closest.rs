@@ -31,7 +31,7 @@ use std::fmt::Debug;
 //  lo(n) = hi(n-1) + 1               <===
 //  Have to special-case 0
 
-trait MaxValue<T> {
+pub trait MaxValue<T> {
     const MAX: T;
 }
 impl MaxValue<u8>   for u8   { const MAX: u8   =   u8::MAX; }
@@ -55,30 +55,39 @@ impl MaxValue<u128> for u128 { const MAX: u128 = u128::MAX; }
 /// ];
 /// assert_eq!(result, expected);
 /// ```
-pub fn int_sqrt_gradually_changing_from<Num, Sqrt>(init: Sqrt) -> impl FnMut(Num) -> Sqrt where
-    Num:  Debug + Add<Output = Num>  + AddAssign + SubAssign + Copy + From<u8> + Sub<Output = Num> + Mul<Output = Num> + Ord,
-    Sqrt: Debug + Add<Output = Sqrt> + AddAssign + SubAssign + Copy + From<u8> + Into<Num>
+pub fn int_sqrt_gradually_changing_from<T>(init: T) -> impl FnMut(T) -> T where
+    T: Debug + Add<Output = T> + AddAssign + SubAssign + Copy + From<u8> + Sub<Output = T> + CheckedMul<Output = T> + Ord + MaxValue<T>,
 {
-    let mut sqrt: Sqrt = init; // the current square root
-    let s: Num = init.into();
-    let mut lo: Num = s * s;
-    let mut hi: Num = s * s + s;
-    move |n: Num| {
+    let mut sqrt: T = init; // the current square root
+    let s: T = init.into();
+    let mut lo: T = s * s;
+    let mut hi: T =
+        match s.checked_mul(s) {
+            None => T::MAX,
+            Some(p) => p + s
+        };
+    move |n: T| {
+        println!("{:?}: ({:?}, {:?}, {:?})", sqrt, lo, n, hi);
         // If the current sqrt doesn't work for this n,
-        // increment it until it does.
+        // increment/decrement it until it does.
         if n > hi {
             while n > hi {
                 sqrt += 1.into();
-                let s: Num = sqrt.into();
+                let s: T = sqrt.into();
                 lo = hi + 1.into();
                 hi += s + s;
             }
         } else {
             while n < lo {
                 sqrt -= 1.into();
-                let s: Num = sqrt.into();
+                let s: T = sqrt.into();
                 hi = lo - 1.into();
-                lo = hi - s - s;
+                lo =
+                    if hi == 0.into() {
+                        hi
+                    } else {
+                        hi - s - s + 1.into()
+                    };
             }
         }
         sqrt
@@ -100,24 +109,23 @@ pub fn int_sqrt_gradually_changing_from<Num, Sqrt>(init: Sqrt) -> impl FnMut(Num
 /// ];
 /// assert_eq!(result, expected);
 /// ```
-pub fn int_sqrt_gradually_ascending_from<Num, Sqrt>(init: Sqrt) -> impl FnMut(Num) -> Sqrt where
-    Num:  Debug + Add<Output = Num>  + AddAssign + Copy + From<u8> + MaxValue + Mul<Output = Num> + Ord,
-    Sqrt: Debug + Add<Output = Sqrt> + AddAssign + Copy + From<u8> + MaxValue + Into<Num>
+pub fn int_sqrt_gradually_ascending_from<T>(init: T) -> impl FnMut(T) -> T where
+    T: Debug + Add<Output = T>  + AddAssign + Copy + From<u8> + Mul<Output = T> + Ord + MaxValue<T>,
 {
-    let mut sqrt: Sqrt = init; // the current square root
-    let s: Num = init.into();
-    let mut hi: Num =
-        if sqrt == Sqrt::MAX {
-            Num::MAX
+    let mut sqrt: T = init; // the current square root
+    let s: T = init.into();
+    let mut hi: T =
+        if sqrt == T::MAX {
+            T::MAX
         } else {
-            s * s + s;
+            s * s + s
         };
-    move |n: Num| {
+    move |n: T| {
         // If the current sqrt doesn't work for this n,
         // increment it until it does.
         while n > hi {
             sqrt += 1.into();
-            let s: Num = sqrt.into();
+            let s: T = sqrt.into();
             hi += s + s;
         }
         sqrt
@@ -139,19 +147,18 @@ pub fn int_sqrt_gradually_ascending_from<Num, Sqrt>(init: Sqrt) -> impl FnMut(Nu
 /// ];
 /// assert_eq!(result, expected);
 /// ```
-pub fn int_sqrt_gradually_descending_from<Num, Sqrt>(init: Sqrt) -> impl FnMut(Num) -> Sqrt where
-    Num:  Debug + Add<Output = Num>  + SubAssign + Copy + From<u8> + Mul<Output = Num> + Sub<Output = Num> + Ord,
-    Sqrt: Debug + Add<Output = Sqrt> + SubAssign + Copy + From<u8> + Into<Num> + Eq
+pub fn int_sqrt_gradually_descending_from<T>(init: T) -> impl FnMut(T) -> T where
+    T: Debug + Add<Output = T> + SubAssign + Copy + From<u8> + Mul<Output = T> + Sub<Output = T> + Ord + MaxValue<T>,
 {
-    let mut sqrt: Sqrt = init;   // the current square root
-    let s: Num = init.into();
-    let mut lo: Num =
+    let mut sqrt: T = init;   // the current square root
+    let s: T = init.into();
+    let mut lo: T =
         if sqrt == 0.into() {
             0.into()
         } else {
             s * s - s + 1.into()
         };
-    move |n: Num| {
+    move |n: T| {
         // If the current sqrt doesn't work for this n,
         // decrement it until it does.
         while n < lo {
@@ -160,7 +167,7 @@ pub fn int_sqrt_gradually_descending_from<Num, Sqrt>(init: Sqrt) -> impl FnMut(N
             if sqrt == 0.into() {
                 lo = 0.into();
             } else {
-                let s: Num = sqrt.into();
+                let s: T = sqrt.into();
                 lo -= s + s;
             }
         }
@@ -180,9 +187,9 @@ mod tests {
     use more_asserts::*;
 
     #[test]
-    fn test_asc_u16_u8() {
-        let to_isqrt = int_sqrt_gradually_ascending_from::<u16, u8>(0);
-        let result: Vec<u8> = (0u16..17)
+    fn test_asc_u8() {
+        let to_isqrt = int_sqrt_gradually_ascending_from::<u8>(0);
+        let result: Vec<u8> = (0u8..17)
             .map(to_isqrt)
             .collect();
         let expected: Vec<u8> = vec![
@@ -193,11 +200,11 @@ mod tests {
     }
 
     #[test]
-    fn test_entire_u16_asc_range_u32_u16() {
+    fn test_entire_u16_asc_range_u16() {
         // Note that for "closest" we need extra width: the closest isqrt of
         // 65535 is greater than 255, and its end value is greater than 65535.
-        let mut to_isqrt = int_sqrt_gradually_ascending_from::<u32, u16>(0);
-        for n in 0u32..65535 {  // For every possible u16 value ...
+        let mut to_isqrt = int_sqrt_gradually_ascending_from::<u16>(0);
+        for n in 0u16..65535 {  // For every possible u16 value ...
             let dist = |s| {
                 let s = s as i64;
                 (n as i64 - s*s).abs()
@@ -215,8 +222,8 @@ mod tests {
     }
 
     #[test]
-    fn test_asc_u16_u16() {
-        let to_isqrt = int_sqrt_gradually_ascending_from::<u16, u16>(0);
+    fn test_asc_u16() {
+        let to_isqrt = int_sqrt_gradually_ascending_from::<u16>(0);
         let result: Vec<_> = (0u16..17)
             .map(to_isqrt)
             .collect();
@@ -228,36 +235,9 @@ mod tests {
     }
 
     #[test]
-    fn test_asc_u32_u16() {
-        let to_isqrt = int_sqrt_gradually_ascending_from::<u32, u16>(0);
-        let result: Vec<_> = (0u32..17)
-            .map(to_isqrt)
-            .collect();
-        let expected: Vec<u16> = vec![
-            // 0  1  2  3  4  5  6  7  8  9 10 11 12 13 14 15 16     // n
-               0, 1, 1, 2, 2, 2, 2, 3, 3, 3, 3, 3, 3, 4, 4, 4, 4     // isqrt(n)
-        ];
-        assert_eq!(result, expected);
-    }
-
-    #[test]
-    fn test_asc_i32_i16() {
-        // Overflow is possible with i32_i16, but not with these numbers.
-        let to_isqrt = int_sqrt_gradually_ascending_from::<i32, i16>(0);
-        let result: Vec<_> = (0i32..17)
-            .map(to_isqrt)
-            .collect();
-        let expected: Vec<i16> = vec![
-            // 0  1  2  3  4  5  6  7  8  9 10 11 12 13 14 15 16     // n
-               0, 1, 1, 2, 2, 2, 2, 3, 3, 3, 3, 3, 3, 4, 4, 4, 4     // isqrt(n)
-        ];
-        assert_eq!(result, expected);
-    }
-
-    #[test]
-    fn test_scaled_asc_u32_u16() {
-        let mut to_isqrt = int_sqrt_gradually_ascending_from::<u32, u16>(0);
-        let result: Vec<_> = (0u32..17)
+    fn test_scaled_asc_u16() {
+        let mut to_isqrt = int_sqrt_gradually_ascending_from::<u16>(0);
+        let result: Vec<_> = (0u16..17)
             .map(|n| to_isqrt(1024*n))
             .collect();
         let expected: Vec<u16> = vec![
@@ -269,9 +249,9 @@ mod tests {
     }
 
     #[test]
-    fn test_desc_u16_u8() {
-        let to_isqrt = int_sqrt_gradually_descending_from::<u16, u8>(5);
-        let result: Vec<u8> = (0u16..17)
+    fn test_desc_u8() {
+        let to_isqrt = int_sqrt_gradually_descending_from::<u8>(5);
+        let result: Vec<u8> = (0u8..17)
             .rev()
             .map(to_isqrt)
             .collect();
@@ -283,10 +263,10 @@ mod tests {
     }
 
     #[test]
-    fn test_u16_u8() {
-        let to_isqrt = int_sqrt_gradually_changing_from::<u16, u8>(0);
-        let result: Vec<u8> = (0u16..10)
-            .chain((0u16..10).rev())
+    fn test_u8() {
+        let to_isqrt = int_sqrt_gradually_changing_from(0u8);
+        let result: Vec<u8> = (0u8..14)
+            .chain((0u8..14).rev())
             .map(to_isqrt)
             .collect();
         let expected: Vec<u8> = vec![

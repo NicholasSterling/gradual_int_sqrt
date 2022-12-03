@@ -1,4 +1,10 @@
 //!
+//! Interesting article relating to the part for trig functions:
+//!
+//! http://files.righto.com/calculator/sinclair_scientific_simulator.html
+//!   c = c - s / 1000
+//!   s = s + c / 1000
+//!
 //! This crate contains functions that generate functions that calculate
 //! the integer square root (hereafter "isqrt") of a number.
 //! For example, the integer square root of 30 is 5, since 5^2 = 25 and
